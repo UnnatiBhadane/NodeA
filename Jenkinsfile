@@ -1,23 +1,28 @@
 pipeline {
     agent any
+    environment {
+        IMAGE_NAME = "bhadaneunnati1110/node-app"  // DockerHub username: sakshi2105
+    }
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/UnnatiBhadane/NodeA.git', branch: 'main'
+                git url: 'https://github.com/UnnatiBhadane/NodeA.git',
+                    branch: 'main',
+                   
             }
         }
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("node-app:${env.BUILD_ID}")
+                    docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
                 }
             }
         }
         stage('Test') {
             steps {
                 script {
-                    docker.image("node-app:${env.BUILD_ID}").inside {
-                        sh 'echo "Tests passed (placeholder)"'
+                    docker.image("${IMAGE_NAME}:${env.BUILD_ID}").inside {
+                        sh 'node --version'
                     }
                 }
             }
@@ -26,17 +31,17 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
-                        docker.image("node-app:${env.BUILD_ID}").push()
-                        docker.image("node-app:${env.BUILD_ID}").push('latest')
+                        docker.image("${IMAGE_NAME}:${env.BUILD_ID}").push()
+                        docker.image("${IMAGE_NAME}:${env.BUILD_ID}").push('latest')
                     }
                 }
             }
         }
-        stage('Deploy') {
+stage('Deploy') {
             steps {
                 script {
                     sh 'docker stop node-app || true && docker rm node-app || true'
-                    sh 'docker run -d --name node-app -p 3000:3000 node-app:latest'
+                    sh "docker run -d --name node-app -p 3000:3000 ${IMAGE_NAME}:latest"
                 }
             }
         }
@@ -47,4 +52,3 @@ pipeline {
         }
     }
 }
-
