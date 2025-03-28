@@ -1,54 +1,63 @@
 pipeline {
     agent any
     environment {
-        IMAGE_NAME = "bhadaneunnati1110/node-app"  // DockerHub username: sakshi2105
+        DOCKERHUB_USERNAME = 'unnatibhadane1110' 
+        APP_NAME = 'node-app'
     }
+
     stages {
         stage('Checkout') {
-            steps {
-                git url: 'https://github.com/UnnatiBhadane/NodeA.git',
-                    branch: 'main',
-                   
+            steps{
+                git branch: 'main', 
+                    credentialsId: 'github-credentials', 
+                    url: 'https://github.com/UnnatiBhadane/NodeA.git'
+               
+                sh 'ls -la'
             }
         }
+
+       
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${IMAGE_NAME}:${env.BUILD_ID}")
+                    
+                    docker.build("${DOCKERHUB_USERNAME}/${APP_NAME}:${env.BUILD_ID}")
+                
+                    sh 'docker images'
                 }
             }
         }
-        stage('Test') {
-            steps {
-                script {
-                    docker.image("${IMAGE_NAME}:${env.BUILD_ID}").inside {
-                        sh 'node --version'
-                    }
-                }
-            }
-        }
+
+    
         stage('Push to Registry') {
             steps {
                 script {
+                    
                     docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
-                        docker.image("${IMAGE_NAME}:${env.BUILD_ID}").push()
-                        docker.image("${IMAGE_NAME}:${env.BUILD_ID}").push('latest')
+                        def appImage = docker.image("${DOCKERHUB_USERNAME}/${APP_NAME}:${env.BUILD_ID}")
+                        appImage.push()          
+                        appImage.push('latest')
                     }
+                    
+                    sh 'docker images'
                 }
             }
         }
-stage('Deploy') {
+
+        stage('Clean Up') {
             steps {
-                script {
-                    sh 'docker stop node-app || true && docker rm node-app || true'
-                    sh "docker run -d --name node-app -p 3000:3000 ${IMAGE_NAME}:latest"
-                }
+                
+                sh "docker rmi ${DOCKERHUB_USERNAME}/${APP_NAME}:${env.BUILD_ID}"
+                sh "docker rmi ${DOCKERHUB_USERNAME}/${APP_NAME}:latest"
             }
         }
     }
     post {
-        always {
-            sh 'docker system prune -f'
+        success {
+            echo "Pipeline completed successfully! Image pushed to Docker Hub."
+        }
+        failure {
+            echo "Pipeline failed. Check the console output for details."
         }
     }
 }
