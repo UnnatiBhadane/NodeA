@@ -24,7 +24,7 @@ pipeline {
         stage('Push to Registry') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhubcredentials') {
                         def appImage = docker.image("${DOCKERHUB_USERNAME}/${APP_NAME}:${env.BUILD_ID}")
                         appImage.push()
                         appImage.push('latest')
